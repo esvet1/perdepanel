@@ -1,60 +1,434 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Perde Ölçü Paneli</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#1a1512" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#faf6ef" media="(prefers-color-scheme: light)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
-/* Layout: proje sekmeleri, altında oda başına bir satır: plan görseli | perde kalemleri */
-:root{--bg:#f6f5f2;--card:#fff;--fg:#23221f;--muted:#76726a;--line:#e3e0d9;--accent:#7a4b2a;--danger:#b23b2e;--note:#f1e6d8}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a18;--card:#252321;--fg:#ece8e1;--muted:#a39e94;--line:#3a3733;--accent:#d49a6a;--danger:#e2786b;--note:#33291f;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#1b1a18;--card:#252321;--fg:#ece8e1;--muted:#a39e94;--line:#3a3733;--accent:#d49a6a;--danger:#e2786b;--note:#33291f;color-scheme:dark}
-body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-h1{font-size:20px;margin:0 0 14px}
-.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
-input,select,button,.btn{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
-button,.btn{cursor:pointer}
-button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
-button.x{color:var(--danger);border-color:transparent;background:none;padding:4px 8px}
-button:disabled{opacity:.5;cursor:default}
-button:focus-visible,input:focus-visible,select:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.status{background:var(--note);border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:12px}
-.wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);min-width:560px}
-th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
-th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.room{font-weight:600}
-.thumb{width:90px;height:68px;object-fit:cover;border:1px solid var(--line);border-radius:4px;cursor:zoom-in;display:block}
-.item{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
-.item input[type=number]{width:90px;font-variant-numeric:tabular-nums}
-.item input.note{flex:1;min-width:100px}
-.muted{color:var(--muted);font-size:13px}
-.sum{margin-top:16px;display:flex;gap:18px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
-.sum b{font-size:18px}
-#pop{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}
-[hidden]{display:none!important}
-#pop img{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+/* ───────── Tokens ───────── */
+:root {
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --bg: #faf6ef; --bg-2: #f3eee4; --bg-3: #ede7da;
+  --card: #fff; --card-hover: #fffdf8;
+  --fg: #1e1a15; --fg-soft: #5a5249; --muted: #9a9080;
+  --line: #e6dfd3; --line-2: #d5cbb8;
+  --accent: #b07430; --accent-hover: #9a6428; --accent-soft: rgba(176,116,48,.12);
+  --danger: #c44032; --danger-soft: rgba(196,64,50,.1);
+  --good: #3d8b5c; --good-soft: rgba(61,139,92,.1);
+  --shadow-sm: 0 1px 3px rgba(30,20,10,.06), 0 1px 2px rgba(30,20,10,.04);
+  --shadow-md: 0 4px 12px rgba(30,20,10,.08), 0 2px 4px rgba(30,20,10,.04);
+  --shadow-lg: 0 12px 40px rgba(30,20,10,.12), 0 4px 12px rgba(30,20,10,.06);
+  --radius: 12px; --radius-sm: 8px; --radius-xs: 6px;
+  --transition: .2s cubic-bezier(.4,0,.2,1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121010; --bg-2: #1a1715; --bg-3: #221e1a;
+    --card: #1e1b17; --card-hover: #252118;
+    --fg: #f0e8da; --fg-soft: #c4b8a4; --muted: #8a7e6e;
+    --line: #332d25; --line-2: #443b2f;
+    --accent: #daa050; --accent-hover: #e8b060; --accent-soft: rgba(218,160,80,.14);
+    --danger: #e87060; --danger-soft: rgba(232,112,96,.12);
+    --good: #5aad78; --good-soft: rgba(90,173,120,.12);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.2), 0 1px 2px rgba(0,0,0,.15);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.25), 0 2px 4px rgba(0,0,0,.15);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.2);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121010; --bg-2: #1a1715; --bg-3: #221e1a;
+  --card: #1e1b17; --card-hover: #252118;
+  --fg: #f0e8da; --fg-soft: #c4b8a4; --muted: #8a7e6e;
+  --line: #332d25; --line-2: #443b2f;
+  --accent: #daa050; --accent-hover: #e8b060; --accent-soft: rgba(218,160,80,.14);
+  --danger: #e87060; --danger-soft: rgba(232,112,96,.12);
+  --good: #5aad78; --good-soft: rgba(90,173,120,.12);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.2), 0 1px 2px rgba(0,0,0,.15);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.25), 0 2px 4px rgba(0,0,0,.15);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.2);
+  color-scheme: dark;
+}
+
+/* ───────── Reset ───────── */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0; font-family: var(--font-body); background: var(--bg);
+  color: var(--fg); line-height: 1.5;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-xs); }
+[hidden] { display: none !important; }
+
+/* ───────── Subtle background pattern ───────── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 85% 90%, color-mix(in srgb, var(--accent) 4%, transparent) 0%, transparent 40%);
+}
+
+/* ───────── Layout ───────── */
+.app {
+  max-width: 1100px; margin: 0 auto;
+  padding: clamp(20px, 4vw, 48px) clamp(16px, 3vw, 32px) 100px;
+}
+
+/* ───────── Header ───────── */
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 24px; margin-bottom: 32px; flex-wrap: wrap;
+  animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.header-left { display: flex; gap: 18px; align-items: center; }
+.logo {
+  flex: 0 0 auto; width: 56px; height: 56px;
+  display: grid; place-items: center;
+  background: linear-gradient(145deg, var(--accent-hover), var(--accent));
+  border-radius: 16px; color: #fff; font-size: 1.5rem;
+  box-shadow: 0 8px 24px -4px rgba(176,116,48,.35),
+              inset 0 1px 0 rgba(255,255,255,.25);
+  transform: rotate(-3deg);
+  transition: transform var(--transition);
+}
+.logo:hover { transform: rotate(0deg) scale(1.05); }
+.header-text h1 {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: clamp(1.6rem, 4vw, 2.4rem); line-height: 1;
+  margin: 0; letter-spacing: -.02em;
+}
+.header-text h1 .dot { color: var(--accent); }
+.header-text .subtitle {
+  margin: 6px 0 0; color: var(--fg-soft); font-size: .9rem; font-weight: 400;
+}
+.header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ───────── Status badge ───────── */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px; border-radius: 999px;
+  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  font-size: .82rem; font-weight: 600; color: var(--accent);
+  transition: all var(--transition);
+  animation: fadeUp .5s .15s cubic-bezier(.2,.8,.2,1) both;
+}
+.status-badge .pulse {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--good);
+  animation: pulse 2s ease-in-out infinite;
+}
+.status-badge.warn { background: var(--danger-soft); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 20%, transparent); }
+.status-badge.warn .pulse { background: var(--danger); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+/* ───────── Summary chips ───────── */
+.summary-row {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px;
+  animation: fadeUp .5s .1s cubic-bezier(.2,.8,.2,1) both;
+}
+.summary-chip {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px 20px; min-width: 120px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+.summary-chip:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.summary-chip .label {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .12em;
+  color: var(--muted); font-weight: 700;
+}
+.summary-chip .value {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: 1.6rem; line-height: 1.1; color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.summary-chip .value small {
+  font-family: var(--font-body); font-weight: 600;
+  font-size: .85rem; color: var(--muted); margin-left: 2px;
+}
+
+/* ───────── Toolbar / Action bars ───────── */
+.toolbar {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 16px;
+  animation: fadeUp .5s .2s cubic-bezier(.2,.8,.2,1) both;
+}
+
+/* ───────── Inputs & Buttons ───────── */
+input, select, button, .btn {
+  font: inherit; font-size: .9rem; color: var(--fg);
+  border-radius: var(--radius-sm); border: 1px solid var(--line);
+  transition: all var(--transition);
+}
+input, select {
+  background: var(--card); padding: 10px 14px;
+}
+input:hover, select:hover { border-color: var(--line-2); }
+input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
+input::placeholder { color: var(--muted); }
+
+button, .btn {
+  cursor: pointer; padding: 10px 18px; font-weight: 600;
+  background: var(--card); border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+}
+button:hover, .btn:hover {
+  background: var(--card-hover); border-color: var(--line-2);
+  box-shadow: var(--shadow-md); transform: translateY(-1px);
+}
+button:active, .btn:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+button:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+
+button.pri, .btn.pri {
+  background: linear-gradient(145deg, var(--accent), var(--accent-hover));
+  border-color: var(--accent-hover); color: #fff;
+  box-shadow: 0 4px 12px -2px rgba(176,116,48,.35);
+}
+button.pri:hover { box-shadow: 0 6px 20px -3px rgba(176,116,48,.45); }
+
+button.sec {
+  background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600;
+  box-shadow: none;
+}
+button.sec:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: none; }
+
+button.x {
+  color: var(--danger); border: none; background: none; padding: 6px 10px;
+  border-radius: var(--radius-xs); font-size: .85rem; box-shadow: none;
+}
+button.x:hover { background: var(--danger-soft); box-shadow: none; transform: none; }
+
+button.ghost {
+  background: transparent; border: 1px dashed var(--line-2);
+  color: var(--muted); font-weight: 500; box-shadow: none;
+}
+button.ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); box-shadow: none; }
+
+/* ───────── Tab buttons ───────── */
+.tabs {
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 20px; padding: 4px; background: var(--bg-3);
+  border-radius: var(--radius); border: 1px solid var(--line);
+  animation: fadeUp .5s .25s cubic-bezier(.2,.8,.2,1) both;
+}
+.tabs button {
+  border-radius: var(--radius-sm); padding: 8px 18px;
+  font-size: .85rem; border: none; background: transparent;
+  color: var(--fg-soft); font-weight: 600; box-shadow: none;
+  transition: all var(--transition);
+}
+.tabs button:hover { background: var(--card); color: var(--fg); box-shadow: var(--shadow-sm); transform: none; }
+.tabs button.active {
+  background: var(--card); color: var(--fg);
+  box-shadow: var(--shadow-md); font-weight: 700;
+}
+.tabs button.x {
+  background: none; color: var(--danger); padding: 6px 12px; font-size: .8rem;
+  margin-left: auto;
+}
+
+/* ───────── Cards / Room rows ───────── */
+.rooms-list {
+  display: flex; flex-direction: column; gap: 16px;
+  animation: fadeUp .5s .3s cubic-bezier(.2,.8,.2,1) both;
+}
+.room-card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+.room-card:hover { box-shadow: var(--shadow-md); }
+
+.room-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-3) 50%, transparent);
+}
+.room-header .room-name {
+  font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 10px;
+}
+.room-header .room-name .room-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: var(--radius-xs);
+  background: var(--accent-soft); color: var(--accent); font-size: .9rem;
+}
+
+.room-body {
+  display: grid; grid-template-columns: auto 1fr; gap: 0;
+}
+@media (max-width: 700px) {
+  .room-body { grid-template-columns: 1fr; }
+}
+.room-img-area {
+  padding: 16px; border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 10px; align-items: center;
+  min-width: 150px;
+}
+@media (max-width: 700px) {
+  .room-img-area { border-right: none; border-bottom: 1px solid var(--line); flex-direction: row; }
+}
+.thumb {
+  width: 120px; height: 90px; object-fit: cover;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  cursor: zoom-in; transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.thumb:hover { transform: scale(1.03); box-shadow: var(--shadow-md); }
+.upload-label {
+  font-size: .8rem; color: var(--accent); font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: var(--radius-xs);
+  transition: background var(--transition);
+}
+.upload-label:hover { background: var(--accent-soft); }
+
+.room-items-area { padding: 16px 20px; }
+
+/* ───────── Item row ───────── */
+.item {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 10px;
+  flex-wrap: wrap; padding: 8px 12px; border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-3) 40%, transparent);
+  border: 1px solid transparent;
+  transition: all var(--transition);
+}
+.item:hover { border-color: var(--line); background: var(--bg-2); }
+.item select { min-width: 80px; padding: 8px 10px; font-size: .85rem; }
+.item input[type=number] {
+  width: 100px; font-variant-numeric: tabular-nums;
+  padding: 8px 10px; font-size: .85rem;
+}
+.item input.note { flex: 1; min-width: 120px; padding: 8px 10px; font-size: .85rem; }
+
+.add-item-btn {
+  margin-top: 6px; font-size: .82rem; padding: 7px 14px;
+}
+
+/* ───────── Empty state ───────── */
+.empty-state {
+  text-align: center; padding: 48px 24px; color: var(--muted);
+  background: var(--card); border: 2px dashed var(--line);
+  border-radius: var(--radius); font-size: .95rem;
+}
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+/* ───────── Lightbox ───────── */
+#pop {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,.8); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  animation: fadeIn .2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+#pop img {
+  max-width: 100%; max-height: 90vh; border-radius: var(--radius);
+  box-shadow: 0 24px 60px -12px rgba(0,0,0,.5);
+}
+
+/* ───────── IO messages ───────── */
+.io-msg {
+  font-size: .82rem; color: var(--muted); font-weight: 500;
+  padding: 4px 0;
+}
+
+/* ───────── Separator ───────── */
+.divider {
+  height: 1px; background: var(--line); margin: 20px 0; border: none;
+}
+
+/* ───────── Theme toggle ───────── */
+.theme-toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--line);
+  cursor: pointer; font-size: 1.1rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+.theme-toggle:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+/* ───────── Responsive ───────── */
+@media (max-width: 600px) {
+  .header { flex-direction: column; align-items: flex-start; }
+  .summary-row { gap: 8px; }
+  .summary-chip { min-width: 90px; padding: 10px 14px; }
+  .summary-chip .value { font-size: 1.3rem; }
+  .item { padding: 6px 8px; gap: 6px; }
+  .room-items-area { padding: 12px 14px; }
+}
+
+/* ───────── Scrollbar ───────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 </style>
+</head>
+<body>
+<div class="app">
 
-<h1>Perde Ölçü Paneli</h1>
-<div class="status" id="statusBox">Yükleniyor…</div>
-<div class="bar">
-  <input id="projName" placeholder="Proje adı (ör. 2. Kat)">
-  <button id="addProj">Proje ekle</button>
-  <button id="exportBtn">JSON indir</button>
-  <label class="btn" tabindex="0" id="importLbl"><input type="file" id="importFile" accept=".json,application/json" hidden>JSON yükle</label>
-  <span class="muted" id="ioMsg"></span>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">🪟</div>
+      <div class="header-text">
+        <h1>Perde Paneli<span class="dot">.</span></h1>
+        <p class="subtitle">Ölçü ve proje yönetim sistemi</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-badge" id="statusBox">
+        <span class="pulse"></span>
+        Yükleniyor…
+      </div>
+      <button class="theme-toggle" id="themeBtn" title="Tema değiştir">🌓</button>
+    </div>
+  </header>
+
+  <!-- Summary -->
+  <div class="summary-row" id="sum"></div>
+
+  <!-- Project toolbar -->
+  <div class="toolbar">
+    <input id="projName" placeholder="Proje adı (ör. 2. Kat)" style="flex:1;min-width:180px">
+    <button class="pri" id="addProj">＋ Proje Ekle</button>
+    <button class="sec" id="exportBtn">⬇ JSON İndir</button>
+    <label class="btn sec" tabindex="0" id="importLbl" style="cursor:pointer">
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      ⬆ JSON Yükle
+    </label>
+    <span class="io-msg" id="ioMsg"></span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="tabs"></div>
+
+  <!-- Add room bar -->
+  <div class="toolbar">
+    <input id="roomName" placeholder="Oda adı (ör. Salon)" style="flex:1;min-width:180px">
+    <button class="pri" id="addRoom">＋ Oda Ekle</button>
+  </div>
+
+  <!-- Room cards -->
+  <div class="rooms-list" id="rows"></div>
+
 </div>
-<div class="bar" id="tabs"></div>
-<div class="bar">
-  <input id="roomName" placeholder="Oda adı (ör. Salon)">
-  <button class="pri" id="addRoom">Oda ekle</button>
-</div>
 
-<div class="wrap"><table>
-  <thead><tr><th>Oda</th><th>Plan görseli</th><th>Perde kalemleri (metre)</th><th></th></tr></thead>
-  <tbody id="rows"></tbody>
-</table></div>
-
-<div class="sum" id="sum"></div>
+<!-- Lightbox -->
 <div id="pop" hidden><img id="popImg" alt="Oda planı"></div>
 
 <script>
@@ -64,71 +438,148 @@ let projects = [], curId = null, saveTimer = null, saving = Promise.resolve();
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const cur = () => projects.find(p => p.id === curId) || projects[0];
-const statusBox = document.getElementById("statusBox");
-const setStatus = (t, warn) => { statusBox.textContent = t; statusBox.style.color = warn ? 'var(--danger)' : ''; };
+const statusBox = document.getElementById('statusBox');
 
-// her değişiklikte tüm listeyi sunucuya gönder; kısa aralıkla birleştirilir
+function setStatus(t, warn) {
+  statusBox.innerHTML = `<span class="pulse"></span>${esc(t)}`;
+  statusBox.classList.toggle('warn', !!warn);
+}
+
+// ───────── Theme toggle ─────────
+const themeBtn = document.getElementById('themeBtn');
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('perde-theme', theme);
+  themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+themeBtn.onclick = () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+};
+// Restore saved theme
+const savedTheme = localStorage.getItem('perde-theme');
+if (savedTheme) applyTheme(savedTheme);
+
+// ───────── Persist ─────────
 function persist(delay = 300) {
   clearTimeout(saveTimer); setStatus('Kaydediliyor…');
   saveTimer = setTimeout(() => {
     const body = JSON.stringify(projects);
-    saving = saving.then(() => fetch('/api/data', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body}))
-      .then(r => { if (!r.ok) throw 0; setStatus('Kaydedildi.'); })
-      .catch(() => setStatus('Kaydedilemedi. İnternet bağlantını kontrol et, sayfayı kapatma.', true));
+    saving = saving.then(() => fetch('/api/data', {method:'PUT', headers:{'Content-Type':'application/json'}, body}))
+      .then(r => { if (!r.ok) throw 0; setStatus('Otomatik kaydedildi ✓'); })
+      .catch(() => setStatus('Kaydedilemedi. Bağlantıyı kontrol et.', true));
   }, delay);
 }
-window.addEventListener('beforeunload', e => { if (statusBox.textContent.startsWith("Kaydedil") && statusBox.textContent !== "Kaydedildi.") e.preventDefault(); });
+window.addEventListener('beforeunload', e => {
+  if (statusBox.textContent.includes('Kaydedil') && !statusBox.textContent.includes('✓')) e.preventDefault();
+});
 
+// ───────── Render tabs ─────────
 function renderTabs() {
   const c = cur();
-  tabs.innerHTML = projects.map(p => `<button class="${p === c ? 'pri' : ''}" data-tab="${p.id}">${esc(p.name)} (${p.rooms.length})</button>`).join('')
-    + (projects.length > 1 ? `<button class="x" id="delProj">Bu projeyi sil</button>` : '');
+  tabs.innerHTML = projects.map(p =>
+    `<button class="${p === c ? 'active' : ''}" data-tab="${p.id}">${esc(p.name)} <span style="opacity:.5;font-size:.8em">(${p.rooms.length})</span></button>`
+  ).join('') + (projects.length > 1
+    ? `<button class="x" id="delProj">🗑 Bu projeyi sil</button>`
+    : '');
 }
 
+// ───────── Render rooms ─────────
 function render() {
   renderTabs();
   const p = cur(), rooms = p ? p.rooms : [];
-  rows.innerHTML = rooms.length ? rooms.map((r, i) => `
-    <tr>
-      <td class="room">${esc(r.name)}</td>
-      <td>${r.img ? `<img class="thumb" src="${esc(r.img)}" data-pop="${i}" alt="${esc(r.name)} planı">` : ''}
-        <label class="muted"><input type="file" accept="image/*" data-img="${i}" hidden><u style="cursor:pointer">${r.img ? 'Değiştir' : 'Görsel yükle'}</u></label></td>
-      <td>${r.items.map((it, j) => `
-        <div class="item">
-          <select data-i="${i}" data-j="${j}" data-k="type">${TYPES.map(t => `<option${t === it.type ? ' selected' : ''}>${t}</option>`).join('')}</select>
-          <input type="number" step="0.01" min="0" placeholder="metre" value="${esc(it.m)}" data-i="${i}" data-j="${j}" data-k="m">
-          <input class="note" placeholder="not (ör. duvar 3,20)" value="${esc(it.note)}" data-i="${i}" data-j="${j}" data-k="note">
-          <button class="x" data-del="${i}-${j}" aria-label="Kalemi sil">✕</button>
-        </div>`).join('')}
-        <button data-add="${i}">+ Kalem ekle</button></td>
-      <td><button class="x" data-delroom="${i}">Odayı sil</button></td>
-    </tr>`).join('')
-    : `<tr><td colspan="4" class="muted">${p ? 'Bu projede oda yok. Yukarıdan oda adı yazıp "Oda ekle"ye bas.' : 'Önce bir proje ekle (ör. 1. Kat).'}</td></tr>`;
+  if (!rooms.length) {
+    rows.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">${p ? '🏠' : '📋'}</span>
+        ${p
+          ? 'Bu projede henüz oda yok.<br>Yukarıdan oda adı yazıp <strong>Oda Ekle</strong>\'ye tıkla.'
+          : 'Henüz proje yok.<br>Yukarıdan proje adı yazıp <strong>Proje Ekle</strong>\'ye tıkla.'}
+      </div>`;
+    sumUp();
+    return;
+  }
+  rows.innerHTML = rooms.map((r, i) => `
+    <div class="room-card">
+      <div class="room-header">
+        <div class="room-name">
+          <span class="room-icon">🪟</span>
+          ${esc(r.name)}
+        </div>
+        <button class="x" data-delroom="${i}">Odayı sil</button>
+      </div>
+      <div class="room-body">
+        <div class="room-img-area">
+          ${r.img ? `<img class="thumb" src="${esc(r.img)}" data-pop="${i}" alt="${esc(r.name)} planı">` : ''}
+          <label class="upload-label">
+            <input type="file" accept="image/*" data-img="${i}" hidden>
+            ${r.img ? '📷 Değiştir' : '📷 Görsel yükle'}
+          </label>
+        </div>
+        <div class="room-items-area">
+          ${r.items.map((it, j) => `
+            <div class="item">
+              <select data-i="${i}" data-j="${j}" data-k="type">
+                ${TYPES.map(t => `<option${t === it.type ? ' selected' : ''}>${t}</option>`).join('')}
+              </select>
+              <input type="number" step="0.01" min="0" placeholder="metre" value="${esc(it.m)}" data-i="${i}" data-j="${j}" data-k="m">
+              <input class="note" placeholder="not (ör. duvar 3,20)" value="${esc(it.note)}" data-i="${i}" data-j="${j}" data-k="note">
+              <button class="x" data-del="${i}-${j}" aria-label="Kalemi sil">✕</button>
+            </div>
+          `).join('')}
+          <button class="ghost add-item-btn" data-add="${i}">＋ Kalem ekle</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
   sumUp();
 }
 
+// ───────── Summary ─────────
 function sumUp() {
   const t = {Tül:0, Fon:0, Kanat:0};
   (cur()?.rooms || []).forEach(r => r.items.forEach(it => t[it.type] += +it.m || 0));
-  sum.innerHTML = TYPES.map(k => `<div><span class="muted">Toplam ${k}</span><br><b>${t[k].toFixed(2)} m</b></div>`).join('');
+  const total = t.Tül + t.Fon + t.Kanat;
+  sum.innerHTML = TYPES.map(k =>
+    `<div class="summary-chip">
+      <span class="label">${k}</span>
+      <span class="value">${t[k].toFixed(2)}<small>m</small></span>
+    </div>`
+  ).join('') + `
+    <div class="summary-chip" style="border-color:var(--accent);background:var(--accent-soft)">
+      <span class="label" style="color:var(--accent)">Toplam</span>
+      <span class="value" style="color:var(--accent)">${total.toFixed(2)}<small>m</small></span>
+    </div>`;
 }
 
+// ───────── Add project ─────────
 function addProject(name) {
   const p = {id: uid(), name, rooms: []};
   projects.push(p); curId = p.id; persist(); render();
 }
-addProj.onclick = () => { const n = projName.value.trim(); if (!n) return projName.focus(); projName.value = ''; addProject(n); };
+addProj.onclick = () => {
+  const n = projName.value.trim();
+  if (!n) return projName.focus();
+  projName.value = ''; addProject(n);
+};
 projName.onkeydown = e => { if (e.key === 'Enter') addProj.click(); };
 
+// ───────── Tab click ─────────
 tabs.onclick = e => {
   const t = e.target.closest('[data-tab]');
   if (t) { curId = t.dataset.tab; render(); }
   if (e.target.id === 'delProj') {
-    if (!delProj.dataset.ok) { delProj.dataset.ok = 1; delProj.textContent = 'Emin misin? Tekrar bas'; return; }
-    projects = projects.filter(x => x !== cur()); curId = projects[0]?.id; persist(); render();
+    if (!delProj.dataset.ok) {
+      delProj.dataset.ok = 1;
+      delProj.textContent = '⚠ Emin misin? Tekrar bas';
+      return;
+    }
+    projects = projects.filter(x => x !== cur());
+    curId = projects[0]?.id; persist(); render();
   }
 };
 
+// ───────── Add room ─────────
 addRoom.onclick = () => {
   const n = roomName.value.trim(); if (!n) return roomName.focus();
   if (!cur()) addProject('1. Kat');
@@ -137,75 +588,105 @@ addRoom.onclick = () => {
 };
 roomName.onkeydown = e => { if (e.key === 'Enter') addRoom.click(); };
 
+// ───────── Inline edits ─────────
 rows.addEventListener('input', e => {
   const {i, j, k} = e.target.dataset; if (k === undefined) return;
   cur().rooms[i].items[j][k] = e.target.value; persist(800); sumUp();
 });
 
-// telefon fotoğrafları çok büyük; 1600 px JPEG'e küçültüp kaydet
+// ───────── Shrink image ─────────
 function shrink(file) {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => {
       const s = Math.min(1, 1600 / Math.max(img.width, img.height));
-      const c = document.createElement('canvas'); c.width = img.width * s; c.height = img.height * s;
-      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(img.src); res(c.toDataURL('image/jpeg', 0.82));
+      const c = document.createElement('canvas');
+      c.width = img.width * s; c.height = img.height * s;
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      res(c.toDataURL('image/jpeg', 0.82));
     };
-    img.onerror = rej; img.src = URL.createObjectURL(file);
+    img.onerror = rej;
+    img.src = URL.createObjectURL(file);
   });
 }
 
 rows.addEventListener('change', async e => {
   const d = e.target.dataset;
   if (d.img !== undefined && e.target.files[0]) {
-    try { cur().rooms[d.img].img = await shrink(e.target.files[0]); persist(); render(); }
-    catch { setStatus('Bu görsel açılamadı. JPG veya PNG dene.', true); }
+    try {
+      cur().rooms[d.img].img = await shrink(e.target.files[0]);
+      persist(); render();
+    } catch {
+      setStatus('Bu görsel açılamadı. JPG veya PNG dene.', true);
+    }
   }
 });
 
+// ───────── Row click actions ─────────
 rows.addEventListener('click', e => {
   const d = e.target.dataset, p = cur();
   if (d.add) { p.rooms[d.add].items.push({type: 'Tül', m: '', note: ''}); persist(); render(); }
   if (d.del) { const [i, j] = d.del.split('-'); p.rooms[i].items.splice(j, 1); persist(); render(); }
-  if (d.delroom) { p.rooms.splice(d.delroom, 1); persist(); render(); }
+  if (d.delroom !== undefined) { p.rooms.splice(d.delroom, 1); persist(); render(); }
   if (d.pop) { popImg.src = p.rooms[d.pop].img; pop.hidden = false; }
 });
+
+// ───────── Lightbox ─────────
 pop.onclick = () => pop.hidden = true;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') pop.hidden = true; });
 
-// panelin tüm sürümlerinin çıktısını kabul eder: proje listesi, {projects:[...]} ya da eski düz oda listesi
+// ───────── Import / Export ─────────
 function toProjects(d) {
   if (d && !Array.isArray(d) && Array.isArray(d.projects)) d = d.projects;
   if (!Array.isArray(d) || !d.length) throw new Error('dosyada proje veya oda bulunamadı.');
   const room = r => ({name: String(r.name ?? 'Oda'), img: r.img || '', items: Array.isArray(r.items) ? r.items : []});
-  if (d.every(x => x && Array.isArray(x.items) && !x.rooms)) return [{name: 'İçe aktarılan', rooms: d.map(room)}];
-  if (!d.every(x => x && Array.isArray(x.rooms))) throw new Error('içerik bu panele ait görünmüyor.');
+  if (d.every(x => x && Array.isArray(x.items) && !x.rooms))
+    return [{name: 'İçe aktarılan', rooms: d.map(room)}];
+  if (!d.every(x => x && Array.isArray(x.rooms)))
+    throw new Error('içerik bu panele ait görünmüyor.');
   return d.map((p, i) => ({name: String(p.name ?? `Proje ${i + 1}`), rooms: p.rooms.filter(Boolean).map(room)}));
 }
 
-// içe aktarılanlar mevcutların yanına eklenir, hiçbir şey silinmez
 importFile.onchange = async () => {
   const f = importFile.files[0]; if (!f) return;
   try {
-    const list = toProjects(JSON.parse((await f.text()).replace(/^﻿/, '')));
+    const list = toProjects(JSON.parse((await f.text()).replace(/^\uFEFF/, '')));
     list.forEach(p => projects.push({id: uid(), ...p}));
     curId = projects[projects.length - 1].id; persist(); render();
-    ioMsg.textContent = `${list.length} proje eklendi.`;
-  } catch (err) { ioMsg.textContent = 'Yüklenemedi: ' + (err instanceof SyntaxError ? 'dosya geçerli bir JSON değil.' : err.message); }
+    ioMsg.textContent = `✓ ${list.length} proje eklendi.`;
+  } catch (err) {
+    ioMsg.textContent = 'Yüklenemedi: ' + (err instanceof SyntaxError ? 'dosya geçerli bir JSON değil.' : err.message);
+  }
   importFile.value = '';
 };
 importLbl.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); importFile.click(); } };
 
 exportBtn.onclick = () => {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(projects.map(({name, rooms}) => ({name, rooms})), null, 2)], {type: 'application/json'}));
+  a.href = URL.createObjectURL(new Blob(
+    [JSON.stringify(projects.map(({name, rooms}) => ({name, rooms})), null, 2)],
+    {type: 'application/json'}
+  ));
   a.download = `perde-olculeri-${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
 
-fetch('/api/data', {cache: 'no-store'}).then(r => { if (!r.ok) throw 0; return r.json(); })
-  .then(d => { projects = d; setStatus('Veriler sunucuda. Her değişiklik otomatik kaydedilir.'); render(); })
-  .catch(() => { setStatus('Veriler yüklenemedi. Sayfayı yenile.', true); addProj.disabled = addRoom.disabled = true; });
+// ───────── Init ─────────
+fetch('/api/data', {cache: 'no-store'})
+  .then(r => { if (!r.ok) throw 0; return r.json(); })
+  .then(d => {
+    projects = d;
+    setStatus('Bağlı — değişiklikler otomatik kaydedilir');
+    render();
+  })
+  .catch(() => {
+    setStatus('Veriler yüklenemedi. Sayfayı yenile.', true);
+    addProj.disabled = addRoom.disabled = true;
+  });
 </script>
-</body></html>
+</body>
+</html>

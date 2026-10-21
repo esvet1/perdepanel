@@ -173,16 +173,25 @@ rows.addEventListener('click', e => {
 pop.onclick = () => pop.hidden = true;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') pop.hidden = true; });
 
+// panelin tüm sürümlerinin çıktısını kabul eder: proje listesi, {projects:[...]} ya da eski düz oda listesi
+function toProjects(d) {
+  if (d && !Array.isArray(d) && Array.isArray(d.projects)) d = d.projects;
+  if (!Array.isArray(d) || !d.length) throw new Error('dosyada proje veya oda bulunamadı.');
+  const room = r => ({name: String(r.name ?? 'Oda'), img: r.img || '', items: Array.isArray(r.items) ? r.items : []});
+  if (d.every(x => x && Array.isArray(x.items) && !x.rooms)) return [{name: 'İçe aktarılan', rooms: d.map(room)}];
+  if (!d.every(x => x && Array.isArray(x.rooms))) throw new Error('içerik bu panele ait görünmüyor.');
+  return d.map((p, i) => ({name: String(p.name ?? `Proje ${i + 1}`), rooms: p.rooms.filter(Boolean).map(room)}));
+}
+
 // içe aktarılanlar mevcutların yanına eklenir, hiçbir şey silinmez
 importFile.onchange = async () => {
   const f = importFile.files[0]; if (!f) return;
   try {
-    const data = JSON.parse(await f.text());
-    if (!Array.isArray(data) || !data.every(p => p && typeof p.name === 'string' && Array.isArray(p.rooms))) throw 0;
-    data.forEach(p => projects.push({id: uid(), name: p.name, rooms: p.rooms.map(r => ({...r, items: r.items || []}))}));
+    const list = toProjects(JSON.parse((await f.text()).replace(/^﻿/, '')));
+    list.forEach(p => projects.push({id: uid(), ...p}));
     curId = projects[projects.length - 1].id; persist(); render();
-    ioMsg.textContent = `${data.length} proje eklendi.`;
-  } catch { ioMsg.textContent = 'Dosya bu panelin JSON formatında değil.'; }
+    ioMsg.textContent = `${list.length} proje eklendi.`;
+  } catch (err) { ioMsg.textContent = 'Yüklenemedi: ' + (err instanceof SyntaxError ? 'dosya geçerli bir JSON değil.' : err.message); }
   importFile.value = '';
 };
 importLbl.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); importFile.click(); } };

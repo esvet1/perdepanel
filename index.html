@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Perde Ölçü Paneli</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: proje sekmeleri, altında oda başına bir satır: plan görseli | perde kalemleri */
+:root{--bg:#f6f5f2;--card:#fff;--fg:#23221f;--muted:#76726a;--line:#e3e0d9;--accent:#7a4b2a;--danger:#b23b2e;--note:#f1e6d8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a18;--card:#252321;--fg:#ece8e1;--muted:#a39e94;--line:#3a3733;--accent:#d49a6a;--danger:#e2786b;--note:#33291f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1b1a18;--card:#252321;--fg:#ece8e1;--muted:#a39e94;--line:#3a3733;--accent:#d49a6a;--danger:#e2786b;--note:#33291f;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:20px;margin:0 0 14px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+input,select,button,.btn{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+button,.btn{cursor:pointer}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.x{color:var(--danger);border-color:transparent;background:none;padding:4px 8px}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.status{background:var(--note);border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:12px}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);min-width:560px}
+th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.room{font-weight:600}
+.thumb{width:90px;height:68px;object-fit:cover;border:1px solid var(--line);border-radius:4px;cursor:zoom-in;display:block}
+.item{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.item input[type=number]{width:90px;font-variant-numeric:tabular-nums}
+.item input.note{flex:1;min-width:100px}
+.muted{color:var(--muted);font-size:13px}
+.sum{margin-top:16px;display:flex;gap:18px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.sum b{font-size:18px}
+#pop{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}
+[hidden]{display:none!important}
+#pop img{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+</style>
+
+<h1>Perde Ölçü Paneli</h1>
+<div class="status" id="status">Yükleniyor…</div>
+<div class="bar">
+  <input id="projName" placeholder="Proje adı (ör. 2. Kat)">
+  <button id="addProj">Proje ekle</button>
+  <button id="exportBtn">JSON indir</button>
+  <label class="btn" tabindex="0" id="importLbl"><input type="file" id="importFile" accept=".json,application/json" hidden>JSON yükle</label>
+  <span class="muted" id="ioMsg"></span>
+</div>
+<div class="bar" id="tabs"></div>
+<div class="bar">
+  <input id="roomName" placeholder="Oda adı (ör. Salon)">
+  <button class="pri" id="addRoom">Oda ekle</button>
+</div>
+
+<div class="wrap"><table>
+  <thead><tr><th>Oda</th><th>Plan görseli</th><th>Perde kalemleri (metre)</th><th></th></tr></thead>
+  <tbody id="rows"></tbody>
+</table></div>
+
+<div class="sum" id="sum"></div>
+<div id="pop" hidden><img id="popImg" alt="Oda planı"></div>
+
+<script>
+const TYPES = ['Tül','Fon','Kanat'];
+let projects = [], curId = null, saveTimer = null, saving = Promise.resolve();
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const cur = () => projects.find(p => p.id === curId) || projects[0];
+const setStatus = (t, warn) => { status.textContent = t; status.style.color = warn ? 'var(--danger)' : ''; };
+
+// her değişiklikte tüm listeyi sunucuya gönder; kısa aralıkla birleştirilir
+function persist(delay = 300) {
+  clearTimeout(saveTimer); setStatus('Kaydediliyor…');
+  saveTimer = setTimeout(() => {
+    const body = JSON.stringify(projects);
+    saving = saving.then(() => fetch('/api/data', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body}))
+      .then(r => { if (!r.ok) throw 0; setStatus('Kaydedildi.'); })
+      .catch(() => setStatus('Kaydedilemedi. İnternet bağlantını kontrol et, sayfayı kapatma.', true));
+  }, delay);
+}
+window.addEventListener('beforeunload', e => { if (status.textContent.startsWith('Kaydedil') && status.textContent !== 'Kaydedildi.') e.preventDefault(); });
+
+function renderTabs() {
+  const c = cur();
+  tabs.innerHTML = projects.map(p => `<button class="${p === c ? 'pri' : ''}" data-tab="${p.id}">${esc(p.name)} (${p.rooms.length})</button>`).join('')
+    + (projects.length > 1 ? `<button class="x" id="delProj">Bu projeyi sil</button>` : '');
+}
+
+function render() {
+  renderTabs();
+  const p = cur(), rooms = p ? p.rooms : [];
+  rows.innerHTML = rooms.length ? rooms.map((r, i) => `
+    <tr>
+      <td class="room">${esc(r.name)}</td>
+      <td>${r.img ? `<img class="thumb" src="${esc(r.img)}" data-pop="${i}" alt="${esc(r.name)} planı">` : ''}
+        <label class="muted"><input type="file" accept="image/*" data-img="${i}" hidden><u style="cursor:pointer">${r.img ? 'Değiştir' : 'Görsel yükle'}</u></label></td>
+      <td>${r.items.map((it, j) => `
+        <div class="item">
+          <select data-i="${i}" data-j="${j}" data-k="type">${TYPES.map(t => `<option${t === it.type ? ' selected' : ''}>${t}</option>`).join('')}</select>
+          <input type="number" step="0.01" min="0" placeholder="metre" value="${esc(it.m)}" data-i="${i}" data-j="${j}" data-k="m">
+          <input class="note" placeholder="not (ör. duvar 3,20)" value="${esc(it.note)}" data-i="${i}" data-j="${j}" data-k="note">
+          <button class="x" data-del="${i}-${j}" aria-label="Kalemi sil">✕</button>
+        </div>`).join('')}
+        <button data-add="${i}">+ Kalem ekle</button></td>
+      <td><button class="x" data-delroom="${i}">Odayı sil</button></td>
+    </tr>`).join('')
+    : `<tr><td colspan="4" class="muted">${p ? 'Bu projede oda yok. Yukarıdan oda adı yazıp "Oda ekle"ye bas.' : 'Önce bir proje ekle (ör. 1. Kat).'}</td></tr>`;
+  sumUp();
+}
+
+function sumUp() {
+  const t = {Tül:0, Fon:0, Kanat:0};
+  (cur()?.rooms || []).forEach(r => r.items.forEach(it => t[it.type] += +it.m || 0));
+  sum.innerHTML = TYPES.map(k => `<div><span class="muted">Toplam ${k}</span><br><b>${t[k].toFixed(2)} m</b></div>`).join('');
+}
+
+function addProject(name) {
+  const p = {id: uid(), name, rooms: []};
+  projects.push(p); curId = p.id; persist(); render();
+}
+addProj.onclick = () => { const n = projName.value.trim(); if (!n) return projName.focus(); projName.value = ''; addProject(n); };
+projName.onkeydown = e => { if (e.key === 'Enter') addProj.click(); };
+
+tabs.onclick = e => {
+  const t = e.target.closest('[data-tab]');
+  if (t) { curId = t.dataset.tab; render(); }
+  if (e.target.id === 'delProj') {
+    if (!delProj.dataset.ok) { delProj.dataset.ok = 1; delProj.textContent = 'Emin misin? Tekrar bas'; return; }
+    projects = projects.filter(x => x !== cur()); curId = projects[0]?.id; persist(); render();
+  }
+};
+
+addRoom.onclick = () => {
+  const n = roomName.value.trim(); if (!n) return roomName.focus();
+  if (!cur()) addProject('1. Kat');
+  cur().rooms.push({name: n, img: '', items: [{type: 'Tül', m: '', note: ''}]});
+  roomName.value = ''; persist(); render();
+};
+roomName.onkeydown = e => { if (e.key === 'Enter') addRoom.click(); };
+
+rows.addEventListener('input', e => {
+  const {i, j, k} = e.target.dataset; if (k === undefined) return;
+  cur().rooms[i].items[j][k] = e.target.value; persist(800); sumUp();
+});
+
+// telefon fotoğrafları çok büyük; 1600 px JPEG'e küçültüp kaydet
+function shrink(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = img.width * s; c.height = img.height * s;
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src); res(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = rej; img.src = URL.createObjectURL(file);
+  });
+}
+
+rows.addEventListener('change', async e => {
+  const d = e.target.dataset;
+  if (d.img !== undefined && e.target.files[0]) {
+    try { cur().rooms[d.img].img = await shrink(e.target.files[0]); persist(); render(); }
+    catch { setStatus('Bu görsel açılamadı. JPG veya PNG dene.', true); }
+  }
+});
+
+rows.addEventListener('click', e => {
+  const d = e.target.dataset, p = cur();
+  if (d.add) { p.rooms[d.add].items.push({type: 'Tül', m: '', note: ''}); persist(); render(); }
+  if (d.del) { const [i, j] = d.del.split('-'); p.rooms[i].items.splice(j, 1); persist(); render(); }
+  if (d.delroom) { p.rooms.splice(d.delroom, 1); persist(); render(); }
+  if (d.pop) { popImg.src = p.rooms[d.pop].img; pop.hidden = false; }
+});
+pop.onclick = () => pop.hidden = true;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') pop.hidden = true; });
+
+// içe aktarılanlar mevcutların yanına eklenir, hiçbir şey silinmez
+importFile.onchange = async () => {
+  const f = importFile.files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!Array.isArray(data) || !data.every(p => p && typeof p.name === 'string' && Array.isArray(p.rooms))) throw 0;
+    data.forEach(p => projects.push({id: uid(), name: p.name, rooms: p.rooms.map(r => ({...r, items: r.items || []}))}));
+    curId = projects[projects.length - 1].id; persist(); render();
+    ioMsg.textContent = `${data.length} proje eklendi.`;
+  } catch { ioMsg.textContent = 'Dosya bu panelin JSON formatında değil.'; }
+  importFile.value = '';
+};
+importLbl.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); importFile.click(); } };
+
+exportBtn.onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(projects.map(({name, rooms}) => ({name, rooms})), null, 2)], {type: 'application/json'}));
+  a.download = `perde-olculeri-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+fetch('/api/data', {cache: 'no-store'}).then(r => { if (!r.ok) throw 0; return r.json(); })
+  .then(d => { projects = d; setStatus('Veriler sunucuda. Her değişiklik otomatik kaydedilir.'); render(); })
+  .catch(() => { setStatus('Veriler yüklenemedi. Sayfayı yenile.', true); addProj.disabled = addRoom.disabled = true; });
+</script>
+</body></html>

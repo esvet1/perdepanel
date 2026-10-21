@@ -35,7 +35,7 @@ th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute
 </style>
 
 <h1>Perde Ölçü Paneli</h1>
-<div class="status" id="status">Yükleniyor…</div>
+<div class="status" id="statusBox">Yükleniyor…</div>
 <div class="bar">
   <input id="projName" placeholder="Proje adı (ör. 2. Kat)">
   <button id="addProj">Proje ekle</button>
@@ -64,7 +64,8 @@ let projects = [], curId = null, saveTimer = null, saving = Promise.resolve();
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const cur = () => projects.find(p => p.id === curId) || projects[0];
-const setStatus = (t, warn) => { status.textContent = t; status.style.color = warn ? 'var(--danger)' : ''; };
+const statusBox = document.getElementById("statusBox");
+const setStatus = (t, warn) => { statusBox.textContent = t; statusBox.style.color = warn ? 'var(--danger)' : ''; };
 
 // her değişiklikte tüm listeyi sunucuya gönder; kısa aralıkla birleştirilir
 function persist(delay = 300) {
@@ -76,7 +77,7 @@ function persist(delay = 300) {
       .catch(() => setStatus('Kaydedilemedi. İnternet bağlantını kontrol et, sayfayı kapatma.', true));
   }, delay);
 }
-window.addEventListener('beforeunload', e => { if (status.textContent.startsWith('Kaydedil') && status.textContent !== 'Kaydedildi.') e.preventDefault(); });
+window.addEventListener('beforeunload', e => { if (statusBox.textContent.startsWith("Kaydedil") && statusBox.textContent !== "Kaydedildi.") e.preventDefault(); });
 
 function renderTabs() {
   const c = cur();

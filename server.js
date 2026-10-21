@@ -37,7 +37,11 @@ http.createServer((req, res) => {
     req.on('data', c => { size += c.length; if (size > MAX) req.destroy(); else chunks.push(c); });
     req.on('end', () => {
       let data;
-      try { data = JSON.parse(Buffer.concat(chunks)); if (!Array.isArray(data)) throw 0; }
+      // eski format: proje listesi; yeni format: { projects, products }
+      try {
+        data = JSON.parse(Buffer.concat(chunks));
+        if (!Array.isArray(data) && !(data && Array.isArray(data.projects) && Array.isArray(data.products))) throw 0;
+      }
       catch { res.writeHead(400); return res.end('Geçersiz veri'); }
       // önce geçici dosyaya yaz, sonra taşı: yarım yazılmış dosya veriyi bozmasın
       const tmp = FILE + '.tmp';

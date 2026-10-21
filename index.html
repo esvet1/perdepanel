@@ -199,11 +199,11 @@ button.pri, .btn.pri {
 }
 button.pri:hover { box-shadow: 0 6px 20px -3px rgba(176,116,48,.45); }
 
-button.sec {
+button.sec, .btn.sec {
   background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600;
   box-shadow: none;
 }
-button.sec:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: none; }
+button.sec:hover, .btn.sec:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: none; }
 
 button.x {
   color: var(--danger); border: none; background: none; padding: 6px 10px;
@@ -395,6 +395,7 @@ button.ghost:hover { border-color: var(--accent); color: var(--accent); backgrou
         <span class="pulse"></span>
         Yükleniyor…
       </div>
+      <button class="pri" id="saveBtn">💾 Kaydet</button>
       <button class="theme-toggle" id="themeBtn" title="Tema değiştir">🌓</button>
     </div>
   </header>
@@ -418,7 +419,7 @@ button.ghost:hover { border-color: var(--accent); color: var(--accent); backgrou
   <div class="tabs" id="tabs"></div>
 
   <!-- Add room bar -->
-  <div class="toolbar">
+  <div class="toolbar" id="roomBar">
     <input id="roomName" placeholder="Oda adı (ör. Salon)" style="flex:1;min-width:180px">
     <button class="pri" id="addRoom">＋ Oda Ekle</button>
   </div>
@@ -432,8 +433,9 @@ button.ghost:hover { border-color: var(--accent); color: var(--accent); backgrou
 <div id="pop" hidden><img id="popImg" alt="Oda planı"></div>
 
 <script>
-const TYPES = ['Tül','Fon','Kanat'];
-let projects = [], curId = null, saveTimer = null, saving = Promise.resolve();
+const DEFAULT_PRODUCTS = ['Tül','Fon','Kanat'];
+let projects = [], products = [...DEFAULT_PRODUCTS], view = 'rooms';
+let curId = null, saveTimer = null, saving = Promise.resolve(), changes = 0, saved = 0;
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -453,40 +455,85 @@ function applyTheme(theme) {
   themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
 }
 themeBtn.onclick = () => {
-  const cur = document.documentElement.getAttribute('data-theme');
-  applyTheme(cur === 'dark' ? 'light' : 'dark');
+  // tema hiç seçilmediyse sistemin o anki temasından başla
+  const now = document.documentElement.getAttribute('data-theme')
+    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  applyTheme(now === 'dark' ? 'light' : 'dark');
 };
 // Restore saved theme
 const savedTheme = localStorage.getItem('perde-theme');
 if (savedTheme) applyTheme(savedTheme);
 
 // ───────── Persist ─────────
-function persist(delay = 300) {
-  clearTimeout(saveTimer); setStatus('Kaydediliyor…');
-  saveTimer = setTimeout(() => {
-    const body = JSON.stringify(projects);
-    saving = saving.then(() => fetch('/api/data', {method:'PUT', headers:{'Content-Type':'application/json'}, body}))
-      .then(r => { if (!r.ok) throw 0; setStatus('Otomatik kaydedildi ✓'); })
-      .catch(() => setStatus('Kaydedilemedi. Bağlantıyı kontrol et.', true));
-  }, delay);
+// her değişiklik sayılır; sunucu son değişikliği onaylayana kadar sayfa "kaydedilmedi" sayılır
+function saveNow() {
+  clearTimeout(saveTimer);
+  const n = changes, body = JSON.stringify({projects, products});
+  setStatus('Kaydediliyor…');
+  saving = saving.then(() => fetch('/api/data', {method:'PUT', headers:{'Content-Type':'application/json'}, body}))
+    .then(r => {
+      if (!r.ok) throw 0;
+      saved = Math.max(saved, n);
+      setStatus(saved === changes ? 'Kaydedildi ✓' : 'Kaydediliyor…');
+    })
+    .catch(() => setStatus('Kaydedilemedi. Bağlantıyı kontrol et ve Kaydet\'e tekrar bas.', true));
+  return saving;
 }
-window.addEventListener('beforeunload', e => {
-  if (statusBox.textContent.includes('Kaydedil') && !statusBox.textContent.includes('✓')) e.preventDefault();
+function persist(delay = 300) {
+  changes++; clearTimeout(saveTimer); setStatus('Kaydedilmemiş değişiklik var');
+  saveTimer = setTimeout(saveNow, delay);
+}
+saveBtn.onclick = () => saveNow();
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow(); }
 });
+window.addEventListener('beforeunload', e => { if (saved !== changes) e.preventDefault(); });
 
 // ───────── Render tabs ─────────
 function renderTabs() {
-  const c = cur();
-  tabs.innerHTML = projects.map(p =>
+  const c = view === 'rooms' ? cur() : null;
+  tabs.innerHTML = `<button class="${view === 'products' ? 'active' : ''}" data-view="products">📦 Ürünlerim <span style="opacity:.5;font-size:.8em">(${products.length})</span></button>`
+    + projects.map(p =>
     `<button class="${p === c ? 'active' : ''}" data-tab="${p.id}">${esc(p.name)} <span style="opacity:.5;font-size:.8em">(${p.rooms.length})</span></button>`
-  ).join('') + (projects.length > 1
+  ).join('') + (view === 'rooms' && projects.length > 1
     ? `<button class="x" id="delProj">🗑 Bu projeyi sil</button>`
     : '');
 }
 
 // ───────── Render rooms ─────────
+function renderProducts() {
+  const used = usedTypes();
+  rows.innerHTML = `
+    <div class="room-card">
+      <div class="room-header">
+        <div class="room-name"><span class="room-icon">📦</span>Ürünlerim</div>
+      </div>
+      <div class="room-items-area">
+        ${products.map((name, i) => `
+          <div class="item">
+            <span style="flex:1;font-weight:600">${esc(name)}</span>
+            ${used.has(name) ? '<span class="io-msg">kullanımda</span>' : ''}
+            <button class="x" data-delprod="${i}">Sil</button>
+          </div>`).join('') || '<p class="io-msg">Henüz ürün yok.</p>'}
+        <div class="item">
+          <input class="note" id="newProd" placeholder="Yeni ürün (ör. Stor, Jaluzi, Korniş)">
+          <button class="pri" id="addProdBtn">＋ Ürün Ekle</button>
+        </div>
+        <p class="io-msg">Eklediğin ürünler her kalemin seçim listesinde çıkar. Bir ürünü silmek, onu kullanan kalemleri silmez.</p>
+      </div>
+    </div>`;
+}
+function usedTypes() {
+  return new Set(projects.flatMap(p => p.rooms.flatMap(r => r.items.map(it => it.type))));
+}
+// silinmiş bir ürün bir kalemde hâlâ seçiliyse listede kalsın
+const optionsFor = type => (products.includes(type) || !type ? products : [...products, type])
+  .map(t => `<option${t === type ? ' selected' : ''}>${esc(t)}</option>`).join('');
+
 function render() {
   renderTabs();
+  roomBar.hidden = view === 'products';
+  if (view === 'products') { renderProducts(); sumUp(); return; }
   const p = cur(), rooms = p ? p.rooms : [];
   if (!rooms.length) {
     rows.innerHTML = `
@@ -520,7 +567,7 @@ function render() {
           ${r.items.map((it, j) => `
             <div class="item">
               <select data-i="${i}" data-j="${j}" data-k="type">
-                ${TYPES.map(t => `<option${t === it.type ? ' selected' : ''}>${t}</option>`).join('')}
+                ${optionsFor(it.type)}
               </select>
               <input type="number" step="0.01" min="0" placeholder="metre" value="${esc(it.m)}" data-i="${i}" data-j="${j}" data-k="m">
               <input class="note" placeholder="not (ör. duvar 3,20)" value="${esc(it.note)}" data-i="${i}" data-j="${j}" data-k="note">
@@ -537,12 +584,15 @@ function render() {
 
 // ───────── Summary ─────────
 function sumUp() {
-  const t = {Tül:0, Fon:0, Kanat:0};
-  (cur()?.rooms || []).forEach(r => r.items.forEach(it => t[it.type] += +it.m || 0));
-  const total = t.Tül + t.Fon + t.Kanat;
-  sum.innerHTML = TYPES.map(k =>
+  const t = {};
+  (cur()?.rooms || []).forEach(r => r.items.forEach(it => t[it.type] = (t[it.type] || 0) + (+it.m || 0)));
+  const total = Object.values(t).reduce((a, b) => a + b, 0);
+  // varsayılanlar hep görünsün, diğer ürünler sadece kullanıldıysa
+  const keys = [...new Set([...DEFAULT_PRODUCTS.filter(k => products.includes(k)), ...Object.keys(t).filter(k => t[k])])];
+  keys.forEach(k => t[k] = t[k] || 0);
+  sum.innerHTML = keys.map(k =>
     `<div class="summary-chip">
-      <span class="label">${k}</span>
+      <span class="label">${esc(k)}</span>
       <span class="value">${t[k].toFixed(2)}<small>m</small></span>
     </div>`
   ).join('') + `
@@ -555,7 +605,7 @@ function sumUp() {
 // ───────── Add project ─────────
 function addProject(name) {
   const p = {id: uid(), name, rooms: []};
-  projects.push(p); curId = p.id; persist(); render();
+  projects.push(p); curId = p.id; view = 'rooms'; persist(); render();
 }
 addProj.onclick = () => {
   const n = projName.value.trim();
@@ -567,7 +617,8 @@ projName.onkeydown = e => { if (e.key === 'Enter') addProj.click(); };
 // ───────── Tab click ─────────
 tabs.onclick = e => {
   const t = e.target.closest('[data-tab]');
-  if (t) { curId = t.dataset.tab; render(); }
+  if (t) { curId = t.dataset.tab; view = 'rooms'; render(); }
+  if (e.target.closest('[data-view="products"]')) { view = 'products'; render(); }
   if (e.target.id === 'delProj') {
     if (!delProj.dataset.ok) {
       delProj.dataset.ok = 1;
@@ -583,7 +634,7 @@ tabs.onclick = e => {
 addRoom.onclick = () => {
   const n = roomName.value.trim(); if (!n) return roomName.focus();
   if (!cur()) addProject('1. Kat');
-  cur().rooms.push({name: n, img: '', items: [{type: 'Tül', m: '', note: ''}]});
+  cur().rooms.push({name: n, img: '', items: [{type: products[0] || '', m: '', note: ''}]});
   roomName.value = ''; persist(); render();
 };
 roomName.onkeydown = e => { if (e.key === 'Enter') addRoom.click(); };
@@ -628,11 +679,23 @@ rows.addEventListener('change', async e => {
 // ───────── Row click actions ─────────
 rows.addEventListener('click', e => {
   const d = e.target.dataset, p = cur();
-  if (d.add) { p.rooms[d.add].items.push({type: 'Tül', m: '', note: ''}); persist(); render(); }
+  if (d.add) { p.rooms[d.add].items.push({type: products[0] || '', m: '', note: ''}); persist(); render(); }
+  if (d.delprod !== undefined) { products.splice(d.delprod, 1); persist(); render(); }
+  if (e.target.id === 'addProdBtn') addProduct();
   if (d.del) { const [i, j] = d.del.split('-'); p.rooms[i].items.splice(j, 1); persist(); render(); }
   if (d.delroom !== undefined) { p.rooms.splice(d.delroom, 1); persist(); render(); }
   if (d.pop) { popImg.src = p.rooms[d.pop].img; pop.hidden = false; }
 });
+
+// ───────── Products ─────────
+function addProduct() {
+  const input = document.getElementById('newProd'), n = input.value.trim();
+  if (!n) return input.focus();
+  if (products.some(x => x.toLocaleLowerCase('tr') === n.toLocaleLowerCase('tr'))) { ioMsg.textContent = `"${n}" zaten listede.`; return input.select(); }
+  products.push(n); persist(); render();
+  document.getElementById('newProd').focus();
+}
+rows.addEventListener('keydown', e => { if (e.target.id === 'newProd' && e.key === 'Enter') addProduct(); });
 
 // ───────── Lightbox ─────────
 pop.onclick = () => pop.hidden = true;
@@ -653,9 +716,11 @@ function toProjects(d) {
 importFile.onchange = async () => {
   const f = importFile.files[0]; if (!f) return;
   try {
-    const list = toProjects(JSON.parse((await f.text()).replace(/^\uFEFF/, '')));
+    const parsed = JSON.parse((await f.text()).replace(/^\uFEFF/, ''));
+    const list = toProjects(parsed);
     list.forEach(p => projects.push({id: uid(), ...p}));
-    curId = projects[projects.length - 1].id; persist(); render();
+    (parsed.products || []).forEach(x => { if (typeof x === 'string' && !products.includes(x)) products.push(x); });
+    curId = projects[projects.length - 1].id; view = 'rooms'; persist(); render();
     ioMsg.textContent = `✓ ${list.length} proje eklendi.`;
   } catch (err) {
     ioMsg.textContent = 'Yüklenemedi: ' + (err instanceof SyntaxError ? 'dosya geçerli bir JSON değil.' : err.message);
@@ -667,7 +732,7 @@ importLbl.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.prevent
 exportBtn.onclick = () => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(
-    [JSON.stringify(projects.map(({name, rooms}) => ({name, rooms})), null, 2)],
+    [JSON.stringify({projects: projects.map(({name, rooms}) => ({name, rooms})), products}, null, 2)],
     {type: 'application/json'}
   ));
   a.download = `perde-olculeri-${new Date().toISOString().slice(0, 10)}.json`;
@@ -679,13 +744,15 @@ exportBtn.onclick = () => {
 fetch('/api/data', {cache: 'no-store'})
   .then(r => { if (!r.ok) throw 0; return r.json(); })
   .then(d => {
-    projects = d;
+    // eski kayıt sadece proje listesiydi
+    projects = Array.isArray(d) ? d : (d.projects || []);
+    if (!Array.isArray(d) && Array.isArray(d.products)) products = d.products;
     setStatus('Bağlı — değişiklikler otomatik kaydedilir');
     render();
   })
   .catch(() => {
     setStatus('Veriler yüklenemedi. Sayfayı yenile.', true);
-    addProj.disabled = addRoom.disabled = true;
+    addProj.disabled = addRoom.disabled = saveBtn.disabled = true;
   });
 </script>
 </body>
